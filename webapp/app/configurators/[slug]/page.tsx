@@ -144,38 +144,6 @@ function EmojiSticker({ value }: { value: string }) {
   );
 }
 
-function MiniScoreCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: number | null;
-}) {
-  const tone = scoreTone(value);
-
-  return (
-    <div className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-sm font-semibold text-slate-500">{label}</p>
-        <span
-          className={`rounded-full px-3 py-1 text-sm font-black ${tone.bg} ${tone.text}`}
-        >
-          {value === null ? "N/A" : `${value}/5`}
-        </span>
-      </div>
-
-      <div className="mt-3 h-2 rounded-full bg-slate-200">
-        <div
-          className={`h-2 rounded-full bg-gradient-to-r ${tone.bar}`}
-          style={{ width: `${scorePercent(value)}%` }}
-        />
-      </div>
-
-      <p className={`mt-3 text-sm font-black ${tone.text}`}>{tone.label}</p>
-    </div>
-  );
-}
-
 function IntelligenceSnapshot({
   mobileScore,
   compatibilityScore,
@@ -246,7 +214,9 @@ function IntelligenceSnapshot({
         </div>
 
         <div className={`rounded-2xl px-4 py-3 text-right ${overallTone.bg}`}>
-          <p className={`text-xs font-black uppercase tracking-[0.18em] ${overallTone.text}`}>
+          <p
+            className={`text-xs font-black uppercase tracking-[0.18em] ${overallTone.text}`}
+          >
             Overall
           </p>
           <p className={`text-2xl font-black ${overallTone.text}`}>
@@ -547,60 +517,6 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
               </div>
             </div>
           </AnimatedSection>
-
-          {similarConfigurators.length > 0 && (
-            <AnimatedSection delay={0.1}>
-              <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
-                      Similar configurators
-                    </p>
-                    <h2 className="mt-3 text-2xl font-black text-slate-950">
-                      More from {label(configurator.industry)}
-                    </h2>
-                  </div>
-
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
-                    <Radar size={21} />
-                  </div>
-                </div>
-
-                <div className="mt-6 grid gap-4 md:grid-cols-3">
-                  {similarConfigurators.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={`/configurators/${item.slug}`}
-                      className="group rounded-2xl border border-slate-100 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/80"
-                    >
-                      <p className="text-sm text-slate-500">
-                        {label(item.country, "Unknown country")}
-                      </p>
-
-                      <h3 className="mt-2 font-black text-slate-950">
-                        {item.company}
-                      </h3>
-
-                      <p className="mt-1 text-sm text-slate-500">
-                        {label(item.product, "No product specified")}
-                      </p>
-
-                      <div className="mt-4 flex items-center justify-between gap-3">
-                        <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-black text-blue-700">
-                          {scoreLabel(item.intelligenceScore)}
-                        </span>
-
-                        <ArrowUpRight
-                          size={17}
-                          className="text-slate-400 transition group-hover:text-blue-600"
-                        />
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            </AnimatedSection>
-          )}
         </div>
 
         <aside className="space-y-6">
@@ -618,7 +534,10 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
               <div className="mt-5 space-y-3">
                 <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/75 p-4 shadow-sm">
                   <span className="font-semibold text-slate-600">Mobile</span>
-                  <ScoreThermometer value={configurator.mobileScore} variant="light" />
+                  <ScoreThermometer
+                    value={configurator.mobileScore}
+                    variant="light"
+                  />
                 </div>
 
                 <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/75 p-4 shadow-sm">
@@ -632,7 +551,9 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
                 </div>
 
                 <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-100 bg-white/75 p-4 shadow-sm">
-                  <span className="font-semibold text-slate-600">Complexity</span>
+                  <span className="font-semibold text-slate-600">
+                    Complexity
+                  </span>
                   <ScoreThermometer
                     value={configurator.complexityScore}
                     variant="light"
@@ -653,26 +574,6 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
           </AnimatedSection>
 
           <AnimatedSection delay={0.08}>
-            <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur">
-              <h2 className="text-2xl font-black text-slate-950">
-                Score breakdown
-              </h2>
-
-              <div className="mt-5 space-y-3">
-                <MiniScoreCard label="Mobile" value={configurator.mobileScore} />
-                <MiniScoreCard
-                  label="Compatibility"
-                  value={configurator.compatibilityScore}
-                />
-                <MiniScoreCard
-                  label="Complexity"
-                  value={configurator.complexityScore}
-                />
-              </div>
-            </div>
-          </AnimatedSection>
-
-          <AnimatedSection delay={0.12}>
             <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur">
               <div className="flex items-center justify-between gap-4">
                 <h2 className="text-2xl font-black text-slate-950">
@@ -707,6 +608,62 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
           </AnimatedSection>
         </aside>
       </section>
+
+      {similarConfigurators.length > 0 && (
+        <section className="relative z-10 mx-auto max-w-6xl px-6 pb-12">
+          <AnimatedSection delay={0.1}>
+            <div className="rounded-3xl border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
+                    Similar configurators
+                  </p>
+                  <h2 className="mt-3 text-2xl font-black text-slate-950">
+                    More from {label(configurator.industry)}
+                  </h2>
+                </div>
+
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600">
+                  <Radar size={21} />
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-4 md:grid-cols-3">
+                {similarConfigurators.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={`/configurators/${item.slug}`}
+                    className="group rounded-2xl border border-slate-100 bg-white/75 p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:bg-blue-50/80"
+                  >
+                    <p className="text-sm text-slate-500">
+                      {label(item.country, "Unknown country")}
+                    </p>
+
+                    <h3 className="mt-2 font-black text-slate-950">
+                      {item.company}
+                    </h3>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      {label(item.product, "No product specified")}
+                    </p>
+
+                    <div className="mt-4 flex items-center justify-between gap-3">
+                      <span className="rounded-full bg-blue-100 px-3 py-1 text-sm font-black text-blue-700">
+                        {scoreLabel(item.intelligenceScore)}
+                      </span>
+
+                      <ArrowUpRight
+                        size={17}
+                        className="text-slate-400 transition group-hover:text-blue-600"
+                      />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </AnimatedSection>
+        </section>
+      )}
     </main>
   );
 }
