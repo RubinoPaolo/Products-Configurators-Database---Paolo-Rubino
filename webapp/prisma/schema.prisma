@@ -1,0 +1,33 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Configurator {
+  id                       Int      @id @default(autoincrement())
+  industry                 String?
+  country                  String?
+  company                  String
+  slug                     String   @unique
+  product                  String?
+  configuratorUrl          String?
+  isActive                 Boolean?
+  alternativeUrl           String?
+  visualizationType        String?
+  mobileScore              Int?
+  compatibilityScore       Int?
+  complexityScore          Int?
+  intelligenceScore        Float?
+  databaseDetailUrl        String?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([industry])
+  @@index([country])
+  @@index([company])
+  @@index([isActive])
+  @@index([visualizationType])
+}
