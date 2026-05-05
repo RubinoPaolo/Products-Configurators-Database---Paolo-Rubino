@@ -629,7 +629,14 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
               </div>
 
               <div className="mt-6 grid gap-4 md:grid-cols-3">
-                {similarConfigurators.map((item) => (
+                {similarConfigurators.map((item: {
+                                            id: string | number;
+                                            slug: string;
+                                            country: string | null;
+                                            company: string;
+                                            product: string | null;
+                                            intelligenceScore: number | null;
+                                          }) => (
                   <Link
                     key={item.id}
                     href={`/configurators/${item.slug}`}
