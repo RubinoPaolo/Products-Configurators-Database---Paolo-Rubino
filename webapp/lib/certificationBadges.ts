@@ -173,6 +173,22 @@ export type CertificationBadgeStyle = {
     textClassName: "text-fuchsia-950",
   };
   
+  export type CertificationOption = {
+    name: string;
+    shortLabel: string;
+    emoji: string;
+    gradientClassName: string;
+  };
+
+  export function getAllCertificationOptions(): CertificationOption[] {
+    return BADGE_STYLES.map((s) => ({
+      name: s.label,
+      shortLabel: s.shortLabel,
+      emoji: s.emoji,
+      gradientClassName: s.gradientClassName,
+    }));
+  }
+
   export function getCertificationBadgeStyle(
     certification: string
   ): CertificationBadgeStyle {

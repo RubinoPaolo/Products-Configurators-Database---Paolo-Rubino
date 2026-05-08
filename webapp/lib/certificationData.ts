@@ -44,11 +44,45 @@ function normalizeForKey(value: string | null | undefined) {
     .trim();
 }
 
-function makeConfiguratorKey(
+export function makeConfiguratorLookupKey(
   company: string | null | undefined,
   product: string | null | undefined
 ) {
   return `${normalizeForKey(company)}||${normalizeForKey(product)}`;
+}
+
+function makeConfiguratorKey(
+  company: string | null | undefined,
+  product: string | null | undefined
+) {
+  return makeConfiguratorLookupKey(company, product);
+}
+
+export function getConfiguratorKeysForCertifications(
+  certificationNames: string[]
+): Set<string> | null {
+  if (certificationNames.length === 0) return null;
+
+  const json = readCertificationJson();
+  if (!json) return new Set();
+
+  let result: Set<string> | null = null;
+
+  for (const certName of certificationNames) {
+    const keysForCert = new Set<string>();
+
+    for (const [key, data] of Object.entries(json.byCompanyProductKey)) {
+      if (data.directCertifications.some((c) => c.certification === certName)) {
+        keysForCert.add(key);
+      }
+    }
+
+    result = result === null
+      ? keysForCert
+      : new Set([...result].filter((k) => keysForCert.has(k)));
+  }
+
+  return result ?? new Set();
 }
 
 function emptyCertificationData(

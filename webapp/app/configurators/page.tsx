@@ -4,14 +4,12 @@ import type { Prisma } from "@prisma/client";
 import {
   ArrowUpRight,
   BadgeCheck,
-  Database,
-  Filter,
-  Search,
   Sparkles,
   XCircle,
 } from "lucide-react";
 import HeroBackground from "@/components/HeroBackground";
 import PremiumStatCard from "@/components/PremiumStatCard";
+import FilterPanel from "@/components/FilterPanel";
 import {
   getCountryCode,
   getIndustrySticker,
@@ -19,6 +17,11 @@ import {
   getVisualizationSticker,
 } from "@/lib/stickers";
 import { prisma } from "@/lib/prisma";
+import { getAllCertificationOptions } from "@/lib/certificationBadges";
+import {
+  getConfiguratorKeysForCertifications,
+  makeConfiguratorLookupKey,
+} from "@/lib/certificationData";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -30,6 +33,7 @@ type SearchParams = {
   active?: string | string[];
   visualization?: string | string[];
   sort?: string | string[];
+  cert?: string | string[];
 };
 
 type PageProps = {
@@ -39,6 +43,12 @@ type PageProps = {
 function getParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
+}
+
+function getParamArray(value: string | string[] | undefined): string[] {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.filter(Boolean);
+  return value.trim() ? [value.trim()] : [];
 }
 
 function label(value: string | null | undefined, fallback = "Not available") {
@@ -170,11 +180,13 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
   const q = getParam(params?.q).trim();
-  const industry = getParam(params?.industry).trim();
-  const country = getParam(params?.country).trim();
   const active = getParam(params?.active).trim();
-  const visualization = getParam(params?.visualization).trim();
   const sort = getParam(params?.sort).trim();
+
+  const selectedIndustries = getParamArray(params?.industry);
+  const selectedCountries = getParamArray(params?.country);
+  const selectedVisualizations = getParamArray(params?.visualization);
+  const selectedCerts = getParamArray(params?.cert);
 
   const where: Prisma.ConfiguratorWhereInput = {};
 
@@ -187,11 +199,26 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
     ];
   }
 
-  if (industry) where.industry = industry;
-  if (country) where.country = country;
+  if (selectedIndustries.length === 1) {
+    where.industry = selectedIndustries[0];
+  } else if (selectedIndustries.length > 1) {
+    where.industry = { in: selectedIndustries };
+  }
+
+  if (selectedCountries.length === 1) {
+    where.country = selectedCountries[0];
+  } else if (selectedCountries.length > 1) {
+    where.country = { in: selectedCountries };
+  }
+
   if (active === "active") where.isActive = true;
   if (active === "inactive") where.isActive = false;
-  if (visualization) where.visualizationType = visualization;
+
+  if (selectedVisualizations.length === 1) {
+    where.visualizationType = selectedVisualizations[0];
+  } else if (selectedVisualizations.length > 1) {
+    where.visualizationType = { in: selectedVisualizations };
+  }
 
   let orderBy: Prisma.ConfiguratorOrderByWithRelationInput[] = [
     { company: "asc" },
@@ -202,31 +229,42 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
   if (sort === "complexity") orderBy = [{ complexityScore: "desc" }, { company: "asc" }];
   if (sort === "compatibility") orderBy = [{ compatibilityScore: "desc" }, { company: "asc" }];
 
+  // Certification filter: build matching key set server-side
+  const certKeys = getConfiguratorKeysForCertifications(selectedCerts);
+
   const [
-    configurators,
     totalCount,
-    filteredCount,
     activeCount,
     inactiveCount,
     filterRows,
   ] = await Promise.all([
-    prisma.configurator.findMany({
-      where,
-      orderBy,
-      take: 120,
-    }),
     prisma.configurator.count(),
-    prisma.configurator.count({ where }),
     prisma.configurator.count({ where: { isActive: true } }),
     prisma.configurator.count({ where: { isActive: false } }),
     prisma.configurator.findMany({
-      select: {
-        industry: true,
-        country: true,
-        visualizationType: true,
-      },
+      select: { industry: true, country: true, visualizationType: true },
     }),
   ]);
+
+  // When cert filter is active, query all matches then filter in memory
+  let configurators;
+  let filteredCount: number;
+
+  if (certKeys !== null) {
+    const allMatching = await prisma.configurator.findMany({ where, orderBy });
+    const certFiltered = allMatching.filter((c) =>
+      certKeys.has(makeConfiguratorLookupKey(c.company, c.product))
+    );
+    filteredCount = certFiltered.length;
+    configurators = certFiltered.slice(0, 120);
+  } else {
+    const [rows, count] = await Promise.all([
+      prisma.configurator.findMany({ where, orderBy, take: 120 }),
+      prisma.configurator.count({ where }),
+    ]);
+    configurators = rows;
+    filteredCount = count;
+  }
 
   const industries = Array.from(
     new Set(
@@ -252,7 +290,17 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
     )
   ).sort();
 
-  const hasFilters = Boolean(q || industry || country || active || visualization || sort);
+  const certificationOptions = getAllCertificationOptions();
+
+  const hasFilters = Boolean(
+    q ||
+    selectedIndustries.length > 0 ||
+    selectedCountries.length > 0 ||
+    active ||
+    selectedVisualizations.length > 0 ||
+    sort ||
+    selectedCerts.length > 0
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -282,7 +330,7 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
 
               <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
                 Filter product configurators by industry, country, status,
-                visualization type and benchmark scores.
+                visualization type, certifications and benchmark scores.
               </p>
             </div>
 
@@ -300,154 +348,19 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(59,130,246,0.13),transparent_26%),radial-gradient(circle_at_86%_18%,rgba(236,72,153,0.09),transparent_24%),radial-gradient(circle_at_50%_82%,rgba(34,211,238,0.13),transparent_30%)]" />
 
         <div className="relative mx-auto max-w-7xl">
-          <form
-            action="/configurators"
-            className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/80 p-5 shadow-xl backdrop-blur"
-          >
-            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-blue-300/25 blur-3xl" />
-
-            <div className="relative flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
-                  Filters
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950">
-                  Refine your search
-                </h2>
-              </div>
-
-              {hasFilters && (
-                <Link
-                  href="/configurators"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-blue-50"
-                >
-                  Clear all filters
-                </Link>
-              )}
-            </div>
-
-            <div className="relative mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Search
-                </label>
-                <div className="relative">
-                  <Search
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <input
-                    name="q"
-                    defaultValue={q}
-                    placeholder="Company, product, industry..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3 text-slate-950 outline-none ring-blue-400 transition placeholder:text-slate-400 focus:ring-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Industry
-                </label>
-                <select
-                  name="industry"
-                  defaultValue={industry}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All industries</option>
-                  {industries.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Country
-                </label>
-                <select
-                  name="country"
-                  defaultValue={country}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All countries</option>
-                  {countries.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Status
-                </label>
-                <select
-                  name="active"
-                  defaultValue={active}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All</option>
-                  <option value="active">Active only</option>
-                  <option value="inactive">Inactive only</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Sort by
-                </label>
-                <select
-                  name="sort"
-                  defaultValue={sort}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">Company</option>
-                  <option value="score">Overall score</option>
-                  <option value="mobile">Mobile score</option>
-                  <option value="complexity">Complexity</option>
-                  <option value="compatibility">Compatibility</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Visualization
-                </label>
-                <select
-                  name="visualization"
-                  defaultValue={visualization}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All types</option>
-                  {visualizations.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="relative mt-5 flex flex-wrap gap-3">
-              <button
-                type="submit"
-                className="rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
-              >
-                Apply filters
-              </button>
-
-              <Link
-                href="/configurators?active=active&sort=score"
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50"
-              >
-                Best active configurators
-              </Link>
-            </div>
-          </form>
+          <FilterPanel
+            industries={industries}
+            countries={countries}
+            visualizations={visualizations}
+            certificationOptions={certificationOptions}
+            initQ={q}
+            initIndustries={selectedIndustries}
+            initCountries={selectedCountries}
+            initActive={active}
+            initVisualizations={selectedVisualizations}
+            initSort={sort}
+            initCertifications={selectedCerts}
+          />
 
           <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-slate-600">
@@ -463,16 +376,21 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                     Search: {q}
                   </span>
                 )}
-                {industry && (
-                  <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
-                    Industry: {industry}
+                {selectedIndustries.map((ind) => (
+                  <span key={ind} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                    Industry: {ind}
                   </span>
-                )}
-                {country && (
-                  <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
-                    Country: {country}
+                ))}
+                {selectedCountries.map((c) => (
+                  <span key={c} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                    Country: {c}
                   </span>
-                )}
+                ))}
+                {selectedCerts.map((c) => (
+                  <span key={c} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                    ✓ {c}
+                  </span>
+                ))}
               </div>
             )}
           </div>
