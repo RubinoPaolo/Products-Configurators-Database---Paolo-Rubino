@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { ChevronDown, Search } from "lucide-react";
 import type { CertificationOption } from "@/lib/certificationBadges";
 
-// ── Multi-select dropdown ────────────────────────────────────────────────────
+type MultiSelectDropdownProps = {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (values: string[]) => void;
+  allLabel?: string;
+};
 
 function MultiSelectDropdown({
   label,
@@ -13,26 +19,26 @@ function MultiSelectDropdown({
   selected,
   onChange,
   allLabel,
-}: {
-  label: string;
-  options: string[];
-  selected: string[];
-  onChange: (values: string[]) => void;
-  allLabel?: string;
-}) {
+}: MultiSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
 
   function toggle(value: string) {
-    onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
+    onChange(
+      selected.includes(value)
+        ? selected.filter((v) => v !== value)
+        : [...selected, value]
+    );
   }
 
   const buttonLabel =
@@ -44,24 +50,45 @@ function MultiSelectDropdown({
 
   return (
     <div ref={ref} className="relative">
-      <label className="mb-2 block text-sm font-semibold text-slate-600">{label}</label>
+      <label className="mb-2 block text-sm font-semibold text-slate-600">
+        {label}
+      </label>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left outline-none ring-blue-400 transition hover:border-blue-300 focus:ring-2"
       >
-        <span className={`truncate text-sm ${selected.length === 0 ? "text-slate-400" : "text-slate-950"}`}>
+        <span
+          className={`truncate text-sm ${
+            selected.length === 0 ? "text-slate-400" : "text-slate-950"
+          }`}
+        >
           {buttonLabel}
         </span>
-        <ChevronDown size={15} className={`ml-2 shrink-0 text-slate-400 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={15}
+          className={`ml-2 shrink-0 text-slate-400 transition-transform duration-150 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {open && (
         <div className="absolute left-0 top-full z-50 mt-1.5 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-2xl">
-          {options.length === 0 && <p className="px-3 py-2 text-sm text-slate-400">No options</p>}
+          {options.length === 0 && (
+            <p className="px-3 py-2 text-sm text-slate-400">No options</p>
+          )}
           {options.map((option) => (
-            <label key={option} className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-blue-50">
-              <input type="checkbox" checked={selected.includes(option)} onChange={() => toggle(option)} className="h-4 w-4 rounded accent-blue-600" />
+            <label
+              key={option}
+              className="flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-slate-700 transition hover:bg-blue-50"
+            >
+              <input
+                type="checkbox"
+                checked={selected.includes(option)}
+                onChange={() => toggle(option)}
+                className="h-4 w-4 rounded accent-blue-600"
+              />
               <span className="truncate">{option}</span>
             </label>
           ))}
@@ -71,27 +98,29 @@ function MultiSelectDropdown({
   );
 }
 
-// ── Single-select dropdown (radio bullets) ───────────────────────────────────
-
 type SelectOption = { label: string; value: string };
+
+type SingleSelectDropdownProps = {
+  label: string;
+  options: SelectOption[];
+  selected: string;
+  onChange: (value: string) => void;
+};
 
 function SingleSelectDropdown({
   label,
   options,
   selected,
   onChange,
-}: {
-  label: string;
-  options: SelectOption[];
-  selected: string;
-  onChange: (value: string) => void;
-}) {
+}: SingleSelectDropdownProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function onPointerDown(e: PointerEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
@@ -101,14 +130,21 @@ function SingleSelectDropdown({
 
   return (
     <div ref={ref} className="relative">
-      <label className="mb-2 block text-sm font-semibold text-slate-600">{label}</label>
+      <label className="mb-2 block text-sm font-semibold text-slate-600">
+        {label}
+      </label>
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left outline-none ring-blue-400 transition hover:border-blue-300 focus:ring-2"
       >
         <span className="truncate text-sm text-slate-950">{current?.label}</span>
-        <ChevronDown size={15} className={`ml-2 shrink-0 text-slate-400 transition-transform duration-150 ${open ? "rotate-180" : ""}`} />
+        <ChevronDown
+          size={15}
+          className={`ml-2 shrink-0 text-slate-400 transition-transform duration-150 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {open && (
@@ -117,11 +153,26 @@ function SingleSelectDropdown({
             <button
               key={option.value}
               type="button"
-              onClick={() => { onChange(option.value); setOpen(false); }}
-              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${option.value === selected ? "bg-blue-50 font-semibold text-blue-700" : "text-slate-700 hover:bg-blue-50"}`}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+                option.value === selected
+                  ? "bg-blue-50 font-semibold text-blue-700"
+                  : "text-slate-700 hover:bg-blue-50"
+              }`}
             >
-              <span className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 transition ${option.value === selected ? "border-blue-600 bg-blue-600" : "border-slate-300"}`}>
-                {option.value === selected && <span className="h-1.5 w-1.5 rounded-full bg-white" />}
+              <span
+                className={`flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-2 transition ${
+                  option.value === selected
+                    ? "border-blue-600 bg-blue-600"
+                    : "border-slate-300"
+                }`}
+              >
+                {option.value === selected && (
+                  <span className="h-1.5 w-1.5 rounded-full bg-white" />
+                )}
               </span>
               {option.label}
             </button>
@@ -132,9 +183,15 @@ function SingleSelectDropdown({
   );
 }
 
-// ── Certification chip ───────────────────────────────────────────────────────
-
-function CertChip({ cert, selected, onClick }: { cert: CertificationOption; selected: boolean; onClick: () => void }) {
+function CertChip({
+  cert,
+  selected,
+  onClick,
+}: {
+  cert: CertificationOption;
+  selected: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       type="button"
@@ -150,8 +207,6 @@ function CertChip({ cert, selected, onClick }: { cert: CertificationOption; sele
     </button>
   );
 }
-
-// ── Main FilterPanel ─────────────────────────────────────────────────────────
 
 const STATUS_OPTIONS: SelectOption[] = [
   { label: "All", value: "" },
@@ -182,8 +237,17 @@ export type FilterPanelProps = {
 };
 
 export default function FilterPanel({
-  industries, countries, visualizations, certificationOptions,
-  initQ, initIndustries, initCountries, initActive, initVisualizations, initSort, initCertifications,
+  industries,
+  countries,
+  visualizations,
+  certificationOptions,
+  initQ,
+  initIndustries,
+  initCountries,
+  initActive,
+  initVisualizations,
+  initSort,
+  initCertifications,
 }: FilterPanelProps) {
   const router = useRouter();
 
@@ -195,8 +259,14 @@ export default function FilterPanel({
   const [sort, setSort] = useState(initSort);
   const [selCerts, setSelCerts] = useState<string[]>(initCertifications);
 
-  const hasFilters = Boolean(q) || selIndustries.length > 0 || selCountries.length > 0 ||
-    Boolean(active) || selVisualizations.length > 0 || Boolean(sort) || selCerts.length > 0;
+  const hasFilters =
+    Boolean(q) ||
+    selIndustries.length > 0 ||
+    selCountries.length > 0 ||
+    Boolean(active) ||
+    selVisualizations.length > 0 ||
+    Boolean(sort) ||
+    selCerts.length > 0;
 
   function apply() {
     const params = new URLSearchParams();
@@ -211,8 +281,13 @@ export default function FilterPanel({
   }
 
   function clearAll() {
-    setQ(""); setSelIndustries([]); setSelCountries([]); setActive("");
-    setSelVisualizations([]); setSort(""); setSelCerts([]);
+    setQ("");
+    setSelIndustries([]);
+    setSelCountries([]);
+    setActive("");
+    setSelVisualizations([]);
+    setSort("");
+    setSelCerts([]);
     router.push("/configurators");
   }
 
@@ -222,22 +297,34 @@ export default function FilterPanel({
 
       <div className="relative flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">Filters</p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950">Refine your search</h2>
+          <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
+            Filters
+          </p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">
+            Refine your search
+          </h2>
         </div>
         {hasFilters && (
-          <button type="button" onClick={clearAll} className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-blue-50">
+          <button
+            type="button"
+            onClick={clearAll}
+            className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-blue-50"
+          >
             Clear all filters
           </button>
         )}
       </div>
 
-      {/* Filtri principali */}
       <div className="relative mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
         <div className="lg:col-span-2">
-          <label className="mb-2 block text-sm font-semibold text-slate-600">Search</label>
+          <label className="mb-2 block text-sm font-semibold text-slate-600">
+            Search
+          </label>
           <div className="relative">
-            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Search
+              size={18}
+              className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+            />
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
@@ -248,14 +335,41 @@ export default function FilterPanel({
           </div>
         </div>
 
-        <MultiSelectDropdown label="Industry" options={industries} selected={selIndustries} onChange={setSelIndustries} allLabel="All industries" />
-        <MultiSelectDropdown label="Country" options={countries} selected={selCountries} onChange={setSelCountries} allLabel="All countries" />
-        <SingleSelectDropdown label="Status" options={STATUS_OPTIONS} selected={active} onChange={setActive} />
-        <SingleSelectDropdown label="Sort by" options={SORT_OPTIONS} selected={sort} onChange={setSort} />
-        <MultiSelectDropdown label="Visualization" options={visualizations} selected={selVisualizations} onChange={setSelVisualizations} allLabel="All types" />
+        <MultiSelectDropdown
+          label="Industry"
+          options={industries}
+          selected={selIndustries}
+          onChange={setSelIndustries}
+          allLabel="All industries"
+        />
+        <MultiSelectDropdown
+          label="Country"
+          options={countries}
+          selected={selCountries}
+          onChange={setSelCountries}
+          allLabel="All countries"
+        />
+        <SingleSelectDropdown
+          label="Status"
+          options={STATUS_OPTIONS}
+          selected={active}
+          onChange={setActive}
+        />
+        <SingleSelectDropdown
+          label="Sort by"
+          options={SORT_OPTIONS}
+          selected={sort}
+          onChange={setSort}
+        />
+        <MultiSelectDropdown
+          label="Visualization"
+          options={visualizations}
+          selected={selVisualizations}
+          onChange={setSelVisualizations}
+          allLabel="All types"
+        />
       </div>
 
-      {/* Filtro certificazioni */}
       <div className="relative mt-6 border-t border-slate-100 pt-5">
         <div className="flex items-baseline gap-3">
           <p className="text-sm font-semibold text-slate-600">Certifications</p>
@@ -265,22 +379,33 @@ export default function FilterPanel({
             </span>
           )}
         </div>
-        <p className="mt-1 text-xs text-slate-400">Show only configurators with all selected certifications</p>
+        <p className="mt-1 text-xs text-slate-400">
+          Show only configurators with all selected certifications
+        </p>
         <div className="mt-3 flex flex-wrap gap-2">
           {certificationOptions.map((cert) => (
             <CertChip
               key={cert.name}
               cert={cert}
               selected={selCerts.includes(cert.name)}
-              onClick={() => setSelCerts((prev) => prev.includes(cert.name) ? prev.filter((c) => c !== cert.name) : [...prev, cert.name])}
+              onClick={() =>
+                setSelCerts((prev) =>
+                  prev.includes(cert.name)
+                    ? prev.filter((c) => c !== cert.name)
+                    : [...prev, cert.name]
+                )
+              }
             />
           ))}
         </div>
       </div>
 
-      {/* Azioni */}
       <div className="relative mt-5 flex flex-wrap gap-3">
-        <button type="button" onClick={apply} className="rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:bg-blue-500">
+        <button
+          type="button"
+          onClick={apply}
+          className="rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
+        >
           Apply filters
         </button>
         <button

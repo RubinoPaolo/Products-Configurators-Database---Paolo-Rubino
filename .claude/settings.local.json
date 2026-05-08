@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(npx next *)",
+      "Bash(\"C:\\\\Users\\\\Paolo Rubino\\\\OneDrive - Poste Italiane S.p.A\\\\Desktop\\\\configurator-intelligence-hub\\\\webapp\\\\node_modules\\\\.bin\\\\next.cmd\" build --no-lint)",
+      "Bash(\"C:\\\\Users\\\\Paolo Rubino\\\\OneDrive - Poste Italiane S.p.A\\\\Desktop\\\\configurator-intelligence-hub\\\\webapp\\\\node_modules\\\\.bin\\\\next.cmd\" dev)",
+      "Bash(node_modules/.bin/next.cmd dev *)"
+    ]
+  }
+}

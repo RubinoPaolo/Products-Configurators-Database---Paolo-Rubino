@@ -5,10 +5,18 @@ import { ArrowUpRight, BadgeCheck, Sparkles, XCircle } from "lucide-react";
 import HeroBackground from "@/components/HeroBackground";
 import PremiumStatCard from "@/components/PremiumStatCard";
 import FilterPanel from "@/components/FilterPanel";
-import { getCountryCode, getIndustrySticker, getProductSticker, getVisualizationSticker } from "@/lib/stickers";
+import {
+  getCountryCode,
+  getIndustrySticker,
+  getProductSticker,
+  getVisualizationSticker,
+} from "@/lib/stickers";
 import { prisma } from "@/lib/prisma";
 import { getAllCertificationOptions } from "@/lib/certificationBadges";
-import { getConfiguratorKeysForCertifications, makeConfiguratorLookupKey } from "@/lib/certificationData";
+import {
+  getConfiguratorKeysForCertifications,
+  makeConfiguratorLookupKey,
+} from "@/lib/certificationData";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -74,17 +82,31 @@ function StatusBadge({ value }: { value: boolean | null }) {
       </span>
     );
   }
-  return <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-600">Unknown</span>;
+  return (
+    <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1 text-sm font-black text-slate-600">
+      Unknown
+    </span>
+  );
 }
 
 function MiniFlag({ country }: { country: string | null }) {
   const code = getCountryCode(country);
   if (!code) {
-    return <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm">🌍</span>;
+    return (
+      <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white text-sm">
+        🌍
+      </span>
+    );
   }
   return (
     <span className="flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 bg-white p-1.5">
-      <Image src={`https://flagcdn.com/w40/${code}.png`} alt={`${country ?? "Country"} flag`} width={24} height={18} className="rounded-sm object-cover" />
+      <Image
+        src={`https://flagcdn.com/w40/${code}.png`}
+        alt={`${country ?? "Country"} flag`}
+        width={24}
+        height={18}
+        className="rounded-sm object-cover"
+      />
     </span>
   );
 }
@@ -94,10 +116,15 @@ function ScoreMetric({ label, value }: { label: string; value: number | null }) 
     <div className="rounded-2xl border border-slate-100 bg-white/80 p-3 shadow-sm">
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs font-semibold text-slate-500">{label}</p>
-        <p className="text-sm font-black text-slate-950">{value === null ? "N/A" : `${value}/5`}</p>
+        <p className="text-sm font-black text-slate-950">
+          {value === null ? "N/A" : `${value}/5`}
+        </p>
       </div>
       <div className="mt-2 h-1.5 rounded-full bg-slate-200">
-        <div className={`h-1.5 rounded-full bg-gradient-to-r ${scoreTone(value)}`} style={{ width: `${scorePercent(value)}%` }} />
+        <div
+          className={`h-1.5 rounded-full bg-gradient-to-r ${scoreTone(value)}`}
+          style={{ width: `${scorePercent(value)}%` }}
+        />
       </div>
     </div>
   );
@@ -108,15 +135,22 @@ function OverallScore({ value }: { value: number | null }) {
     <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 shadow-sm">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">Overall score</p>
-          <p className="mt-1 text-2xl font-black text-slate-950">{scoreLabel(value)}</p>
+          <p className="text-xs font-black uppercase tracking-[0.22em] text-blue-600">
+            Overall score
+          </p>
+          <p className="mt-1 text-2xl font-black text-slate-950">
+            {scoreLabel(value)}
+          </p>
         </div>
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-white text-blue-600 shadow-sm">
           <Sparkles size={22} />
         </div>
       </div>
       <div className="mt-4 h-2 rounded-full bg-slate-200">
-        <div className={`h-2 rounded-full bg-gradient-to-r ${scoreTone(value)}`} style={{ width: `${scorePercent(value)}%` }} />
+        <div
+          className={`h-2 rounded-full bg-gradient-to-r ${scoreTone(value)}`}
+          style={{ width: `${scorePercent(value)}%` }}
+        />
       </div>
     </div>
   );
@@ -144,32 +178,44 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
     ];
   }
 
-  if (selectedIndustries.length === 1) where.industry = selectedIndustries[0];
-  else if (selectedIndustries.length > 1) where.industry = { in: selectedIndustries };
+  if (selectedIndustries.length === 1) {
+    where.industry = selectedIndustries[0];
+  } else if (selectedIndustries.length > 1) {
+    where.industry = { in: selectedIndustries };
+  }
 
-  if (selectedCountries.length === 1) where.country = selectedCountries[0];
-  else if (selectedCountries.length > 1) where.country = { in: selectedCountries };
+  if (selectedCountries.length === 1) {
+    where.country = selectedCountries[0];
+  } else if (selectedCountries.length > 1) {
+    where.country = { in: selectedCountries };
+  }
 
   if (active === "active") where.isActive = true;
   if (active === "inactive") where.isActive = false;
 
-  if (selectedVisualizations.length === 1) where.visualizationType = selectedVisualizations[0];
-  else if (selectedVisualizations.length > 1) where.visualizationType = { in: selectedVisualizations };
+  if (selectedVisualizations.length === 1) {
+    where.visualizationType = selectedVisualizations[0];
+  } else if (selectedVisualizations.length > 1) {
+    where.visualizationType = { in: selectedVisualizations };
+  }
 
-  let orderBy: Prisma.ConfiguratorOrderByWithRelationInput[] = [{ company: "asc" }];
+  let orderBy: Prisma.ConfiguratorOrderByWithRelationInput[] = [
+    { company: "asc" },
+  ];
   if (sort === "score") orderBy = [{ intelligenceScore: "desc" }, { company: "asc" }];
   if (sort === "mobile") orderBy = [{ mobileScore: "desc" }, { company: "asc" }];
   if (sort === "complexity") orderBy = [{ complexityScore: "desc" }, { company: "asc" }];
   if (sort === "compatibility") orderBy = [{ compatibilityScore: "desc" }, { company: "asc" }];
 
-  // Filtraggio per certificazioni (post-query, in memory)
   const certKeys = getConfiguratorKeysForCertifications(selectedCerts);
 
   const [totalCount, activeCount, inactiveCount, filterRows] = await Promise.all([
     prisma.configurator.count(),
     prisma.configurator.count({ where: { isActive: true } }),
     prisma.configurator.count({ where: { isActive: false } }),
-    prisma.configurator.findMany({ select: { industry: true, country: true, visualizationType: true } }),
+    prisma.configurator.findMany({
+      select: { industry: true, country: true, visualizationType: true },
+    }),
   ]);
 
   let configurators;
@@ -177,7 +223,9 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
 
   if (certKeys !== null) {
     const allMatching = await prisma.configurator.findMany({ where, orderBy });
-    const certFiltered = allMatching.filter((c) => certKeys.has(makeConfiguratorLookupKey(c.company, c.product)));
+    const certFiltered = allMatching.filter((c) =>
+      certKeys.has(makeConfiguratorLookupKey(c.company, c.product))
+    );
     filteredCount = certFiltered.length;
     configurators = certFiltered.slice(0, 120);
   } else {
@@ -189,24 +237,58 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
     filteredCount = count;
   }
 
-  const industries = Array.from(new Set(filterRows.map((r) => r.industry).filter((v): v is string => Boolean(v)))).sort();
-  const countries = Array.from(new Set(filterRows.map((r) => r.country).filter((v): v is string => Boolean(v)))).sort();
-  const visualizations = Array.from(new Set(filterRows.map((r) => r.visualizationType).filter((v): v is string => Boolean(v)))).sort();
+  const industries = Array.from(
+    new Set(
+      filterRows
+        .map((r) => r.industry)
+        .filter((v): v is string => Boolean(v))
+    )
+  ).sort();
+
+  const countries = Array.from(
+    new Set(
+      filterRows
+        .map((r) => r.country)
+        .filter((v): v is string => Boolean(v))
+    )
+  ).sort();
+
+  const visualizations = Array.from(
+    new Set(
+      filterRows
+        .map((r) => r.visualizationType)
+        .filter((v): v is string => Boolean(v))
+    )
+  ).sort();
+
   const certificationOptions = getAllCertificationOptions();
 
-  const hasFilters = Boolean(q || selectedIndustries.length || selectedCountries.length || active || selectedVisualizations.length || sort || selectedCerts.length);
+  const hasFilters = Boolean(
+    q ||
+      selectedIndustries.length ||
+      selectedCountries.length ||
+      active ||
+      selectedVisualizations.length ||
+      sort ||
+      selectedCerts.length
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
       <section className="relative overflow-hidden border-b border-slate-200 bg-slate-50">
         <HeroBackground variant="light" />
         <div className="relative mx-auto max-w-7xl px-6 py-16 md:py-20">
-          <Link href="/" className="inline-flex items-center text-sm font-black text-blue-600 transition hover:text-blue-500">
+          <Link
+            href="/"
+            className="inline-flex items-center text-sm font-black text-blue-600 transition hover:text-blue-500"
+          >
             ← Back to homepage
           </Link>
           <div className="mt-8 grid gap-10 lg:grid-cols-[1fr_0.72fr] lg:items-end">
             <div>
-              <p className="text-sm font-black uppercase tracking-[0.35em] text-blue-600">Configurator explorer</p>
+              <p className="text-sm font-black uppercase tracking-[0.35em] text-blue-600">
+                Configurator explorer
+              </p>
               <h1 className="mt-4 max-w-4xl text-5xl font-black tracking-tight text-slate-950 md:text-7xl">
                 Search the global{" "}
                 <span className="bg-gradient-to-r from-blue-600 via-cyan-500 to-fuchsia-500 bg-clip-text text-transparent">
@@ -214,7 +296,8 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                 </span>
               </h1>
               <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
-                Filter product configurators by industry, country, status, visualization type, certifications and benchmark scores.
+                Filter product configurators by industry, country, status,
+                visualization type, certifications and benchmark scores.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -247,24 +330,46 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
 
           <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-slate-600">
-              Showing <span className="font-black text-slate-950">{configurators.length}</span>{" "}
-              of <span className="font-black text-slate-950">{filteredCount}</span> matching records
+              Showing{" "}
+              <span className="font-black text-slate-950">{configurators.length}</span>{" "}
+              of <span className="font-black text-slate-950">{filteredCount}</span>{" "}
+              matching records
             </p>
             {hasFilters && (
               <div className="flex flex-wrap gap-2">
-                {q && <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">Search: {q}</span>}
-                {selectedIndustries.map((v) => <span key={v} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">Industry: {v}</span>)}
-                {selectedCountries.map((v) => <span key={v} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">Country: {v}</span>)}
-                {selectedCerts.map((v) => <span key={v} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">✓ {v}</span>)}
+                {q && (
+                  <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                    Search: {q}
+                  </span>
+                )}
+                {selectedIndustries.map((v) => (
+                  <span key={v} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                    Industry: {v}
+                  </span>
+                ))}
+                {selectedCountries.map((v) => (
+                  <span key={v} className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                    Country: {v}
+                  </span>
+                ))}
+                {selectedCerts.map((v) => (
+                  <span key={v} className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-sm font-semibold text-blue-700">
+                    ✓ {v}
+                  </span>
+                ))}
               </div>
             )}
           </div>
 
           <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {configurators.map((configurator) => {
-              const mainUrl = configurator.alternativeUrl || configurator.configuratorUrl || null;
+              const mainUrl =
+                configurator.alternativeUrl || configurator.configuratorUrl || null;
               return (
-                <article key={configurator.id} className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:bg-white">
+                <article
+                  key={configurator.id}
+                  className="group relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/80 p-6 shadow-xl backdrop-blur transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:bg-white"
+                >
                   <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-blue-300/25 blur-3xl opacity-0 transition duration-500 group-hover:opacity-100" />
                   <div className="absolute -bottom-12 -left-12 h-28 w-28 rounded-full bg-cyan-300/20 blur-3xl opacity-0 transition duration-500 group-hover:opacity-100" />
 
@@ -275,7 +380,9 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                       </div>
                       <div>
                         <p className="text-sm text-slate-500">{label(configurator.industry)}</p>
-                        <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">{configurator.company}</h2>
+                        <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">
+                          {configurator.company}
+                        </h2>
                       </div>
                     </div>
                     <StatusBadge value={configurator.isActive} />
@@ -286,8 +393,12 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                       {getProductSticker(configurator.product)}
                     </div>
                     <div>
-                      <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">Product</p>
-                      <p className="mt-1 font-bold text-slate-950">{label(configurator.product, "No product specified")}</p>
+                      <p className="text-xs font-black uppercase tracking-[0.22em] text-slate-400">
+                        Product
+                      </p>
+                      <p className="mt-1 font-bold text-slate-950">
+                        {label(configurator.product, "No product specified")}
+                      </p>
                     </div>
                   </div>
 
@@ -313,11 +424,19 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                   </div>
 
                   <div className="relative mt-6 flex gap-3">
-                    <Link href={`/configurators/${configurator.slug}`} className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-center font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-500">
+                    <Link
+                      href={`/configurators/${configurator.slug}`}
+                      className="flex flex-1 items-center justify-center gap-2 rounded-2xl bg-blue-600 px-4 py-3 text-center font-bold text-white shadow-lg shadow-blue-500/20 transition hover:bg-blue-500"
+                    >
                       View profile <ArrowUpRight size={16} />
                     </Link>
                     {mainUrl && (
-                      <a href={mainUrl} target="_blank" rel="noreferrer" className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 shadow-sm transition hover:bg-blue-50">
+                      <a
+                        href={mainUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="rounded-2xl border border-slate-200 bg-white px-4 py-3 font-bold text-slate-900 shadow-sm transition hover:bg-blue-50"
+                      >
                         Open
                       </a>
                     )}
@@ -330,8 +449,13 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
           {configurators.length === 0 && (
             <div className="mt-8 rounded-[2rem] border border-slate-200 bg-white/80 p-10 text-center shadow-xl backdrop-blur">
               <h2 className="text-2xl font-black text-slate-950">No configurators found</h2>
-              <p className="mt-3 text-slate-600">Try changing your filters or resetting the search.</p>
-              <Link href="/configurators" className="mt-6 inline-flex rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-500">
+              <p className="mt-3 text-slate-600">
+                Try changing your filters or resetting the search.
+              </p>
+              <Link
+                href="/configurators"
+                className="mt-6 inline-flex rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white transition hover:bg-blue-500"
+              >
                 Reset filters
               </Link>
             </div>
