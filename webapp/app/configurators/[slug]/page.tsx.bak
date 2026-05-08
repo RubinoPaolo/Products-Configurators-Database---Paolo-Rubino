@@ -24,7 +24,6 @@ import {
   getVisualizationSticker,
 } from "@/lib/stickers";
 import { prisma } from "@/lib/prisma";
-import ConfiguratorCertificationSection from "@/components/ConfiguratorCertificationSection";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -518,12 +517,6 @@ export default async function ConfiguratorDetailPage({ params }: PageProps) {
               </div>
             </div>
           </AnimatedSection>
-
-          <ConfiguratorCertificationSection
-            company={configurator.company}
-            product={configurator.product}
-          />
-
         </div>
 
         <aside className="space-y-6">
