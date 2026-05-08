@@ -44,11 +44,18 @@ function normalizeForKey(value: string | null | undefined) {
     .trim();
 }
 
-function makeConfiguratorKey(
+export function makeConfiguratorLookupKey(
   company: string | null | undefined,
   product: string | null | undefined
 ) {
   return `${normalizeForKey(company)}||${normalizeForKey(product)}`;
+}
+
+function makeConfiguratorKey(
+  company: string | null | undefined,
+  product: string | null | undefined
+) {
+  return makeConfiguratorLookupKey(company, product);
 }
 
 function emptyCertificationData(
@@ -82,6 +89,37 @@ function readCertificationJson(): CertificationJson | null {
   } catch {
     return null;
   }
+}
+
+export function getConfiguratorKeysForCertifications(
+  certificationNames: string[]
+): Set<string> | null {
+  if (certificationNames.length === 0) return null;
+
+  const json = readCertificationJson();
+  if (!json) return new Set();
+
+  let result: Set<string> | null = null;
+
+  for (const certName of certificationNames) {
+    const keysForCert = new Set<string>();
+    for (const [key, data] of Object.entries(json.byCompanyProductKey)) {
+      if (data.directCertifications.some((c) => c.certification === certName)) {
+        keysForCert.add(key);
+      }
+    }
+    if (result === null) {
+      result = keysForCert;
+    } else {
+      const intersection = new Set<string>();
+      result.forEach((k) => {
+        if (keysForCert.has(k)) intersection.add(k);
+      });
+      result = intersection;
+    }
+  }
+
+  return result ?? new Set<string>();
 }
 
 export function getConfiguratorCertifications(
