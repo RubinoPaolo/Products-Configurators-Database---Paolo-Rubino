@@ -1,15 +1,17 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import {
   ArrowUpRight,
   BadgeCheck,
-  Search,
   Sparkles,
   XCircle,
 } from "lucide-react";
+import FilterPanel from "@/components/FilterPanel";
 import HeroBackground from "@/components/HeroBackground";
 import PremiumStatCard from "@/components/PremiumStatCard";
+import { getAllCertificationOptions } from "@/lib/certificationBadges";
+import { hasCertification } from "@/lib/configuratorCertificationIndex";
 import {
   getCountryCode,
   getIndustrySticker,
@@ -28,6 +30,7 @@ type SearchParams = {
   active?: string | string[];
   visualization?: string | string[];
   sort?: string | string[];
+  cert?: string | string[];
 };
 
 type PageProps = {
@@ -36,17 +39,17 @@ type PageProps = {
 
 type ConfiguratorRow = Prisma.ConfiguratorGetPayload<Record<string, never>>;
 
-type CountRow = {
-  count: bigint | number;
-};
-
-type IdRow = {
-  id: number;
-};
-
 function getParam(value: string | string[] | undefined) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
+}
+
+function getParamList(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value.map((item) => item.trim()).filter(Boolean);
+  }
+
+  return value?.trim() ? [value.trim()] : [];
 }
 
 function label(value: string | null | undefined, fallback = "Not available") {
@@ -70,9 +73,20 @@ function scoreTone(score: number | null) {
   return "from-red-500 to-orange-500";
 }
 
-function toNumberCount(value: bigint | number | undefined) {
-  if (typeof value === "bigint") return Number(value);
-  return value ?? 0;
+function includesCaseInsensitive(
+  value: string | null | undefined,
+  normalizedSearch: string
+) {
+  return (value ?? "").toLowerCase().includes(normalizedSearch);
+}
+
+function matchesSearch(configurator: ConfiguratorRow, normalizedSearch: string) {
+  return (
+    includesCaseInsensitive(configurator.company, normalizedSearch) ||
+    includesCaseInsensitive(configurator.product, normalizedSearch) ||
+    includesCaseInsensitive(configurator.industry, normalizedSearch) ||
+    includesCaseInsensitive(configurator.country, normalizedSearch)
+  );
 }
 
 function StatusBadge({ value }: { value: boolean | null }) {
@@ -183,19 +197,34 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
   const params = await searchParams;
 
   const q = getParam(params?.q).trim();
-  const industry = getParam(params?.industry).trim();
-  const country = getParam(params?.country).trim();
+  const industriesSelected = getParamList(params?.industry);
+  const countriesSelected = getParamList(params?.country);
   const active = getParam(params?.active).trim();
-  const visualization = getParam(params?.visualization).trim();
+  const visualizationsSelected = getParamList(params?.visualization);
   const sort = getParam(params?.sort).trim();
+  const certificationsSelected = getParamList(params?.cert);
 
   const where: Prisma.ConfiguratorWhereInput = {};
 
-  if (industry) where.industry = industry;
-  if (country) where.country = country;
-  if (active === "active") where.isActive = true;
-  if (active === "inactive") where.isActive = false;
-  if (visualization) where.visualizationType = visualization;
+  if (industriesSelected.length > 0) {
+    where.industry = { in: industriesSelected };
+  }
+
+  if (countriesSelected.length > 0) {
+    where.country = { in: countriesSelected };
+  }
+
+  if (active === "active") {
+    where.isActive = true;
+  }
+
+  if (active === "inactive") {
+    where.isActive = false;
+  }
+
+  if (visualizationsSelected.length > 0) {
+    where.visualizationType = { in: visualizationsSelected };
+  }
 
   let orderBy: Prisma.ConfiguratorOrderByWithRelationInput[] = [
     { company: "asc" },
@@ -217,123 +246,53 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
     orderBy = [{ compatibilityScore: "desc" }, { company: "asc" }];
   }
 
-  const totalCountPromise = prisma.configurator.count();
-  const activeCountPromise = prisma.configurator.count({ where: { isActive: true } });
-  const inactiveCountPromise = prisma.configurator.count({ where: { isActive: false } });
-  const filterRowsPromise = prisma.configurator.findMany({
-    select: {
-      industry: true,
-      country: true,
-      visualizationType: true,
-    },
-  });
-
-  let configurators: ConfiguratorRow[] = [];
-  let filteredCount = 0;
-
-  if (q) {
-    const normalizedSearch = q.toLowerCase();
-    const searchPattern = `%${normalizedSearch}%`;
-
-    const rawConditions: Prisma.Sql[] = [
-      Prisma.sql`(
-        LOWER("company") LIKE ${searchPattern}
-        OR LOWER(COALESCE("product", '')) LIKE ${searchPattern}
-        OR LOWER(COALESCE("industry", '')) LIKE ${searchPattern}
-        OR LOWER(COALESCE("country", '')) LIKE ${searchPattern}
-      )`,
-    ];
-
-    if (industry) {
-      rawConditions.push(Prisma.sql`"industry" = ${industry}`);
-    }
-
-    if (country) {
-      rawConditions.push(Prisma.sql`"country" = ${country}`);
-    }
-
-    if (active === "active") {
-      rawConditions.push(Prisma.sql`"isActive" = TRUE`);
-    }
-
-    if (active === "inactive") {
-      rawConditions.push(Prisma.sql`"isActive" = FALSE`);
-    }
-
-    if (visualization) {
-      rawConditions.push(Prisma.sql`"visualizationType" = ${visualization}`);
-    }
-
-    const rawWhereSql = Prisma.sql`WHERE ${Prisma.join(rawConditions, " AND ")}`;
-
-    let rawOrderBySql = Prisma.sql`ORDER BY "company" ASC`;
-
-    if (sort === "score") {
-      rawOrderBySql = Prisma.sql`ORDER BY "intelligenceScore" DESC, "company" ASC`;
-    }
-
-    if (sort === "mobile") {
-      rawOrderBySql = Prisma.sql`ORDER BY "mobileScore" DESC, "company" ASC`;
-    }
-
-    if (sort === "complexity") {
-      rawOrderBySql = Prisma.sql`ORDER BY "complexityScore" DESC, "company" ASC`;
-    }
-
-    if (sort === "compatibility") {
-      rawOrderBySql = Prisma.sql`ORDER BY "compatibilityScore" DESC, "company" ASC`;
-    }
-
-    const [matchingIds, countRows] = await Promise.all([
-      prisma.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT "id" AS id
-        FROM "Configurator"
-        ${rawWhereSql}
-        ${rawOrderBySql}
-        LIMIT 120
-      `),
-      prisma.$queryRaw<CountRow[]>(Prisma.sql`
-        SELECT COUNT(*) AS count
-        FROM "Configurator"
-        ${rawWhereSql}
-      `),
-    ]);
-
-    filteredCount = toNumberCount(countRows[0]?.count);
-
-    const matchingIdValues = matchingIds.map((row) => row.id);
-
-    if (matchingIdValues.length > 0) {
-      const rows = await prisma.configurator.findMany({
-        where: {
-          id: {
-            in: matchingIdValues,
-          },
-        },
-      });
-
-      const rowsById = new Map(rows.map((row) => [row.id, row]));
-      configurators = matchingIdValues
-        .map((id) => rowsById.get(id))
-        .filter((row): row is ConfiguratorRow => Boolean(row));
-    }
-  } else {
-    [configurators, filteredCount] = await Promise.all([
-      prisma.configurator.findMany({
-        where,
-        orderBy,
-        take: 120,
-      }),
-      prisma.configurator.count({ where }),
-    ]);
-  }
-
-  const [totalCount, activeCount, inactiveCount, filterRows] = await Promise.all([
-    totalCountPromise,
-    activeCountPromise,
-    inactiveCountPromise,
-    filterRowsPromise,
+  const [
+    totalCount,
+    activeCount,
+    inactiveCount,
+    filterRows,
+    databaseFilteredRows,
+  ] = await Promise.all([
+    prisma.configurator.count(),
+    prisma.configurator.count({ where: { isActive: true } }),
+    prisma.configurator.count({ where: { isActive: false } }),
+    prisma.configurator.findMany({
+      select: {
+        industry: true,
+        country: true,
+        visualizationType: true,
+      },
+    }),
+    prisma.configurator.findMany({
+      where,
+      orderBy,
+    }),
   ]);
+
+  const normalizedSearch = q.toLowerCase();
+
+  const searchFilteredRows =
+    normalizedSearch.length > 0
+      ? databaseFilteredRows.filter((configurator) =>
+          matchesSearch(configurator, normalizedSearch)
+        )
+      : databaseFilteredRows;
+
+  const certificationFilteredRows =
+    certificationsSelected.length > 0
+      ? searchFilteredRows.filter((configurator) =>
+          certificationsSelected.every((certification) =>
+            hasCertification(
+              configurator.company,
+              configurator.product,
+              certification
+            )
+          )
+        )
+      : searchFilteredRows;
+
+  const filteredCount = certificationFilteredRows.length;
+  const configurators: ConfiguratorRow[] = certificationFilteredRows.slice(0, 120);
 
   const industries = Array.from(
     new Set(
@@ -341,7 +300,7 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
         .map((row) => row.industry)
         .filter((value): value is string => Boolean(value))
     )
-  ).sort();
+  ).sort((a, b) => a.localeCompare(b));
 
   const countries = Array.from(
     new Set(
@@ -349,7 +308,7 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
         .map((row) => row.country)
         .filter((value): value is string => Boolean(value))
     )
-  ).sort();
+  ).sort((a, b) => a.localeCompare(b));
 
   const visualizations = Array.from(
     new Set(
@@ -357,9 +316,19 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
         .map((row) => row.visualizationType)
         .filter((value): value is string => Boolean(value))
     )
-  ).sort();
+  ).sort((a, b) => a.localeCompare(b));
 
-  const hasFilters = Boolean(q || industry || country || active || visualization || sort);
+  const certificationOptions = getAllCertificationOptions();
+
+  const hasFilters = Boolean(
+    q ||
+      industriesSelected.length > 0 ||
+      countriesSelected.length > 0 ||
+      active ||
+      visualizationsSelected.length > 0 ||
+      sort ||
+      certificationsSelected.length > 0
+  );
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-950">
@@ -389,7 +358,7 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
 
               <p className="mt-6 max-w-3xl text-lg leading-8 text-slate-600">
                 Filter product configurators by industry, country, status,
-                visualization type and benchmark scores.
+                visualization type, certifications and benchmark scores.
               </p>
             </div>
 
@@ -407,154 +376,19 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_10%,rgba(59,130,246,0.13),transparent_26%),radial-gradient(circle_at_86%_18%,rgba(236,72,153,0.09),transparent_24%),radial-gradient(circle_at_50%_82%,rgba(34,211,238,0.13),transparent_30%)]" />
 
         <div className="relative mx-auto max-w-7xl">
-          <form
-            action="/configurators"
-            className="relative overflow-hidden rounded-[2rem] border border-slate-200 bg-white/80 p-5 shadow-xl backdrop-blur"
-          >
-            <div className="absolute -right-12 -top-12 h-36 w-36 rounded-full bg-blue-300/25 blur-3xl" />
-
-            <div className="relative flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <p className="text-sm font-black uppercase tracking-[0.3em] text-blue-600">
-                  Filters
-                </p>
-                <h2 className="mt-2 text-2xl font-black text-slate-950">
-                  Refine your search
-                </h2>
-              </div>
-
-              {hasFilters && (
-                <Link
-                  href="/configurators"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-900 shadow-sm transition hover:bg-blue-50"
-                >
-                  Clear all filters
-                </Link>
-              )}
-            </div>
-
-            <div className="relative mt-6 grid gap-4 md:grid-cols-3 lg:grid-cols-6">
-              <div className="lg:col-span-2">
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Search
-                </label>
-                <div className="relative">
-                  <Search
-                    size={18}
-                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <input
-                    name="q"
-                    defaultValue={q}
-                    placeholder="Company, product, industry..."
-                    className="w-full rounded-2xl border border-slate-200 bg-white px-11 py-3 text-slate-950 outline-none ring-blue-400 transition placeholder:text-slate-400 focus:ring-2"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Industry
-                </label>
-                <select
-                  name="industry"
-                  defaultValue={industry}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All industries</option>
-                  {industries.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Country
-                </label>
-                <select
-                  name="country"
-                  defaultValue={country}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All countries</option>
-                  {countries.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Status
-                </label>
-                <select
-                  name="active"
-                  defaultValue={active}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All</option>
-                  <option value="active">Active only</option>
-                  <option value="inactive">Inactive only</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Sort by
-                </label>
-                <select
-                  name="sort"
-                  defaultValue={sort}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">Company</option>
-                  <option value="score">Overall score</option>
-                  <option value="mobile">Mobile score</option>
-                  <option value="complexity">Complexity</option>
-                  <option value="compatibility">Compatibility</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-slate-600">
-                  Visualization
-                </label>
-                <select
-                  name="visualization"
-                  defaultValue={visualization}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-slate-950 outline-none ring-blue-400 transition focus:ring-2"
-                >
-                  <option value="">All types</option>
-                  {visualizations.map((item) => (
-                    <option key={item} value={item}>
-                      {item}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="relative mt-5 flex flex-wrap gap-3">
-              <button
-                type="submit"
-                className="rounded-2xl bg-blue-600 px-5 py-3 font-bold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5 hover:bg-blue-500"
-              >
-                Apply filters
-              </button>
-
-              <Link
-                href="/configurators?active=active&sort=score"
-                className="rounded-2xl border border-slate-200 bg-white px-5 py-3 font-bold text-slate-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-50"
-              >
-                Best active configurators
-              </Link>
-            </div>
-          </form>
+          <FilterPanel
+            industries={industries}
+            countries={countries}
+            visualizations={visualizations}
+            certificationOptions={certificationOptions}
+            initQ={q}
+            initIndustries={industriesSelected}
+            initCountries={countriesSelected}
+            initActive={active}
+            initVisualizations={visualizationsSelected}
+            initSort={sort}
+            initCertifications={certificationsSelected}
+          />
 
           <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-slate-600">
@@ -570,16 +404,42 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
                     Search: {q}
                   </span>
                 )}
-                {industry && (
-                  <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+
+                {industriesSelected.map((industry) => (
+                  <span
+                    key={`industry-${industry}`}
+                    className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600"
+                  >
                     Industry: {industry}
                   </span>
-                )}
-                {country && (
-                  <span className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600">
+                ))}
+
+                {countriesSelected.map((country) => (
+                  <span
+                    key={`country-${country}`}
+                    className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600"
+                  >
                     Country: {country}
                   </span>
-                )}
+                ))}
+
+                {visualizationsSelected.map((visualization) => (
+                  <span
+                    key={`visualization-${visualization}`}
+                    className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600"
+                  >
+                    Visualization: {visualization}
+                  </span>
+                ))}
+
+                {certificationsSelected.map((certification) => (
+                  <span
+                    key={`certification-${certification}`}
+                    className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-sm text-slate-600"
+                  >
+                    Certification: {certification}
+                  </span>
+                ))}
               </div>
             )}
           </div>
