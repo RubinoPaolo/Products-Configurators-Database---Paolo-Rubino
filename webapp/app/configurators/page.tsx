@@ -4,8 +4,6 @@ import { Prisma } from "@prisma/client";
 import {
   ArrowUpRight,
   BadgeCheck,
-  Database,
-  Filter,
   Search,
   Sparkles,
   XCircle,
@@ -239,64 +237,64 @@ export default async function ConfiguratorsPage({ searchParams }: PageProps) {
 
     const rawConditions: Prisma.Sql[] = [
       Prisma.sql`(
-        LOWER(company) LIKE ${searchPattern}
-        OR LOWER(COALESCE(product, '')) LIKE ${searchPattern}
-        OR LOWER(COALESCE(industry, '')) LIKE ${searchPattern}
-        OR LOWER(COALESCE(country, '')) LIKE ${searchPattern}
+        LOWER("company") LIKE ${searchPattern}
+        OR LOWER(COALESCE("product", '')) LIKE ${searchPattern}
+        OR LOWER(COALESCE("industry", '')) LIKE ${searchPattern}
+        OR LOWER(COALESCE("country", '')) LIKE ${searchPattern}
       )`,
     ];
 
     if (industry) {
-      rawConditions.push(Prisma.sql`industry = ${industry}`);
+      rawConditions.push(Prisma.sql`"industry" = ${industry}`);
     }
 
     if (country) {
-      rawConditions.push(Prisma.sql`country = ${country}`);
+      rawConditions.push(Prisma.sql`"country" = ${country}`);
     }
 
     if (active === "active") {
-      rawConditions.push(Prisma.sql`isActive = ${1}`);
+      rawConditions.push(Prisma.sql`"isActive" = TRUE`);
     }
 
     if (active === "inactive") {
-      rawConditions.push(Prisma.sql`isActive = ${0}`);
+      rawConditions.push(Prisma.sql`"isActive" = FALSE`);
     }
 
     if (visualization) {
-      rawConditions.push(Prisma.sql`visualizationType = ${visualization}`);
+      rawConditions.push(Prisma.sql`"visualizationType" = ${visualization}`);
     }
 
     const rawWhereSql = Prisma.sql`WHERE ${Prisma.join(rawConditions, " AND ")}`;
 
-    let rawOrderBySql = Prisma.sql`ORDER BY company ASC`;
+    let rawOrderBySql = Prisma.sql`ORDER BY "company" ASC`;
 
     if (sort === "score") {
-      rawOrderBySql = Prisma.sql`ORDER BY intelligenceScore DESC, company ASC`;
+      rawOrderBySql = Prisma.sql`ORDER BY "intelligenceScore" DESC, "company" ASC`;
     }
 
     if (sort === "mobile") {
-      rawOrderBySql = Prisma.sql`ORDER BY mobileScore DESC, company ASC`;
+      rawOrderBySql = Prisma.sql`ORDER BY "mobileScore" DESC, "company" ASC`;
     }
 
     if (sort === "complexity") {
-      rawOrderBySql = Prisma.sql`ORDER BY complexityScore DESC, company ASC`;
+      rawOrderBySql = Prisma.sql`ORDER BY "complexityScore" DESC, "company" ASC`;
     }
 
     if (sort === "compatibility") {
-      rawOrderBySql = Prisma.sql`ORDER BY compatibilityScore DESC, company ASC`;
+      rawOrderBySql = Prisma.sql`ORDER BY "compatibilityScore" DESC, "company" ASC`;
     }
 
     const [matchingIds, countRows] = await Promise.all([
       prisma.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT id
-        FROM Configurator
+        SELECT "id" AS id
+        FROM "Configurator"
         ${rawWhereSql}
         ${rawOrderBySql}
         LIMIT 120
       `),
       prisma.$queryRaw<CountRow[]>(Prisma.sql`
         SELECT COUNT(*) AS count
-        FROM Configurator
+        FROM "Configurator"
         ${rawWhereSql}
       `),
     ]);
